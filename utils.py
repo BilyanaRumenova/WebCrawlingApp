@@ -19,10 +19,10 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-async def create_screenshot_record(unique_id: str, start_url: str, db: Session = Depends(get_db)):
+async def create_screenshot_record(task_id: str, start_url: str, db: Session = Depends(get_db)):
     try:
         screenshot = Screenshot(
-            id=unique_id,
+            id=task_id,
             start_url=start_url,
         )
         db.add(screenshot)
@@ -34,7 +34,7 @@ async def create_screenshot_record(unique_id: str, start_url: str, db: Session =
         logger.error(f"Error saving screenshots information to database: {str(e)}")
 
 
-async def capture_and_save_screenshots(url: str, num_links: int, screenshot_id: str):
+async def capture_and_save_screenshots(url: str, num_links: int, task_id: str):
     async with async_playwright() as playwright:
         webkit = playwright.webkit
         browser = await webkit.launch()
@@ -42,7 +42,7 @@ async def capture_and_save_screenshots(url: str, num_links: int, screenshot_id: 
         try:
             page = await context.new_page()
             await page.goto(url)
-            screenshots_path = create_screenshots_directory(screenshot_id)
+            screenshots_path = create_screenshots_directory(task_id)
             await page.screenshot(path=f"{screenshots_path}/{uuid.uuid4()}.png")
 
             # Parse HTML and collect links
@@ -54,7 +54,7 @@ async def capture_and_save_screenshots(url: str, num_links: int, screenshot_id: 
                 url = await page.evaluate('(element) => element.href', link)
                 if url:
                     new_page = await context.new_page()
-                    tasks.append(capture_screenshot(new_page, url, screenshot_id))
+                    tasks.append(capture_screenshot(new_page, url, task_id))
 
             await asyncio.gather(*tasks)
 
@@ -62,31 +62,27 @@ async def capture_and_save_screenshots(url: str, num_links: int, screenshot_id: 
             await browser.close()
 
 
-async def capture_screenshot(page: Page, url: str, screenshot_id: str):
+async def capture_screenshot(page: Page, url: str, task_id: str):
     try:
-        screenshots_path = get_screenshots_directory(screenshot_id)
+        screenshots_path = get_screenshots_directory(task_id)
         await page.goto(url)
         await page.screenshot(path=f"{screenshots_path}/{uuid.uuid4()}.png")
         await page.close()
-        logger.info(f"Screenshot captured for {screenshot_id} - {url}")
+        logger.info(f"Screenshot captured for task {task_id} - {url}")
 
     except Exception as e:
-        logger.error(f"Error capturing screenshot for {screenshot_id} - {url}: {str(e)}")
+        logger.error(f"Error capturing screenshot for task {task_id} - {url}: {str(e)}")
 
 
-def create_screenshots_directory(screenshots_id) -> str:
-    screenshots_path = f"./screenshots/{screenshots_id}"
+def create_screenshots_directory(task_id) -> str:
+    screenshots_path = f"./screenshots/{task_id}"
     os.makedirs(screenshots_path)
     return screenshots_path
 
 
-def get_screenshots_directory(screenshots_id) -> str:
-    return f"./screenshots/{screenshots_id}"
+def get_screenshots_directory(task_id) -> str:
+    return f"./screenshots/{task_id}"
 
 
 async def open_files(screenshots_dir):
     webbrowser.open(screenshots_dir)
-
-
-def dir_exists(screenshots_dir) -> bool:
-    return os.path.exists(screenshots_dir) or not os.path.isdir(screenshots_dir)

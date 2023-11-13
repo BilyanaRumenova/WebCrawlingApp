@@ -23,31 +23,31 @@ async def check_server_health() -> dict:
 @app.post("/screenshots", status_code=status.HTTP_201_CREATED)
 async def make_screenshots(start_url: str, number_of_links_to_follow: int, background_tasks: BackgroundTasks,
                            db: Session = Depends(get_db)) -> dict:
-    screenshot_id = str(uuid.uuid4())
+    task_id = str(uuid.uuid4())
     background_tasks.add_task(
         utils.capture_and_save_screenshots,
         start_url,
         number_of_links_to_follow,
-        screenshot_id
+        task_id
     )
-    await utils.create_screenshot_record(screenshot_id, start_url, db)
+    await utils.create_screenshot_record(task_id, start_url, db)
 
     return {
-        "id": screenshot_id
+        "id": task_id
     }
 
 
 @app.get("/screenshots/{id}")
-async def get_screenshots(screenshot_id: str) -> dict:
-    screenshots_dir = utils.get_screenshots_directory(screenshot_id)
-    if not utils.dir_exists(screenshots_dir):
+async def get_screenshots(task_id: str) -> dict:
+    screenshots_dir = utils.get_screenshots_directory(task_id)
+    if not os.path.exists(screenshots_dir) or not os.path.isdir(screenshots_dir):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Screenshots not found")
 
     filenames = os.listdir(screenshots_dir)
     screenshot_filenames = [filename for filename in filenames if filename.lower().endswith('.png')]
 
     result = {
-        "id": screenshot_id,
+        "id": task_id,
         "screenshot_filenames": screenshot_filenames,
     }
 
