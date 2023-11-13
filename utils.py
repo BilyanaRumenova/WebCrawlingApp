@@ -4,9 +4,10 @@ import os
 import uuid
 import webbrowser
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from playwright.async_api import async_playwright, Page
 from sqlalchemy.orm import Session
+from starlette import status
 
 from database.db import get_db, Screenshot
 
@@ -57,6 +58,9 @@ async def capture_and_save_screenshots(url: str, num_links: int, task_id: str):
                     tasks.append(capture_screenshot(new_page, url, task_id))
 
             await asyncio.gather(*tasks)
+
+        except Exception as e:
+            logger.error(f"Invalid or non-existing URL - {url}: {str(e)}")
 
         finally:
             await browser.close()

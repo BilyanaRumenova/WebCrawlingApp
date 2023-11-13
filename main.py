@@ -1,7 +1,6 @@
 import os
 import uuid
 
-import requests
 from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
@@ -25,9 +24,6 @@ async def check_server_health() -> dict:
 @app.post("/screenshots", status_code=status.HTTP_201_CREATED)
 async def make_screenshots(start_url: str, number_of_links_to_follow: int, background_tasks: BackgroundTasks,
                            db: Session = Depends(get_db)) -> dict:
-    if not is_valid_url(start_url):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or non-existing URL")
-
     task_id = str(uuid.uuid4())
     background_tasks.add_task(
         utils.capture_and_save_screenshots,
@@ -58,11 +54,3 @@ async def get_screenshots(task_id: str) -> dict:
 
     await utils.open_files(screenshots_dir)
     return result
-
-
-def is_valid_url(url: str) -> bool:
-    try:
-        response = requests.get(url)
-        return response.status_code in range(200, 300)
-    except requests.RequestException:
-        return False
