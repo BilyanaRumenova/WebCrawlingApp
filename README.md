@@ -14,7 +14,7 @@ A web service built with FastAPI responsible for collecting website screenshots 
 ### Option 2: Running with Docker
 1. Ensure Docker is installed
 2. Build the Docker Image: ```docker build -t {service_name} .```
-3. Run the Docker Container: ```docker run -p 8000:8000 {servie_name}```
+3. Run the Docker Container: ```docker run -p 8000:8000 {service_name}```
 
 ## Usage
 Endpoints:
